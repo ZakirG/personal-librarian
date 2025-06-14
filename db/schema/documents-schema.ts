@@ -9,7 +9,7 @@ import { usersTable } from "./users-schema"
 
 export const documentsTable = pgTable("documents", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
   title: text("title"),
   fileType: text("file_type"),
   storageUri: text("storage_uri"),
@@ -25,7 +25,7 @@ export const contentSourceEnum = pgEnum("content_source", ["document_chunk", "ll
 
 export const contentItemsTable = pgTable("content_items", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
+  userId: text("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
   sourceType: contentSourceEnum("source_type").notNull(),
   sourceId: uuid("source_id").notNull(),
   chunkIndex: integer("chunk_index").default(0),

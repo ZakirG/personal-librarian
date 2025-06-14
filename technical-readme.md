@@ -159,8 +159,13 @@ npm run analyze      # Bundle analysis
 
 ### Environment Variables
 ```bash
-# Database
+# Database (Supabase)
 DATABASE_URL=                                    # PostgreSQL connection string
+
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=                        # Supabase project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=                   # Supabase anon public key
+SUPABASE_SERVICE_ROLE_KEY=                       # Supabase service role key (server-only)
 
 # Authentication (Clerk)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=              # Public Clerk key

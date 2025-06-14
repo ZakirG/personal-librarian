@@ -2,6 +2,7 @@
 
 import { createLlmReportAction } from "./db/llm-reports-actions"
 import { createPromptHistoryAction } from "./db/prompt-history-actions"
+import { ragQueryAction } from "./rag/rag-service"
 import { ActionState } from "@/types"
 
 interface ChatResponse {
@@ -11,62 +12,83 @@ interface ChatResponse {
     title: string
     content: string
   }
+  sources?: Array<{
+    id: string
+    score: number
+    text: string
+    source?: string
+  }>
+  isRagResponse?: boolean
 }
 
 export async function processChatMessageAction(
   userId: string,
-  message: string
+  message: string,
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = []
 ): Promise<ActionState<ChatResponse>> {
   try {
-    // Store the user prompt in history
-    await createPromptHistoryAction({
+    console.log("🚀 CHAT SERVICE: Starting processChatMessageAction")
+    console.log("📝 Input params:", {
       userId,
-      prompt: message,
-      llmResponseId: null
+      userIdType: typeof userId,
+      message: message.substring(0, 100) + "...",
+      historyLength: conversationHistory.length
     })
 
-    // Analyze the message to determine if we should generate a research report
-    const shouldGenerateReport = await shouldTriggerResearchReport(message)
-    
-    if (shouldGenerateReport) {
-      // Generate a research report
-      const reportResult = await generateResearchReport(userId, message)
-      
-      if (reportResult.isSuccess && reportResult.data) {
-        // Update prompt history with the report ID
-        await createPromptHistoryAction({
-          userId,
-          prompt: message,
-          llmResponseId: reportResult.data.id
-        })
+    // Use RAG to generate a personalized response based on user's documents
+    console.log("🔍 CHAT SERVICE: Calling ragQueryAction...")
+    const ragResult = await ragQueryAction({
+      userId,
+      query: message,
+      conversationHistory
+    })
 
-        return {
-          isSuccess: true,
-          message: "Generated research report based on your request",
-          data: {
-            message: `I've generated a comprehensive research report titled "${reportResult.data.title}". You can find it in your reports feed above.`,
-            reportGenerated: {
-              id: reportResult.data.id,
-              title: reportResult.data.title || "Research Report",
-              content: reportResult.data.content
-            }
-          }
+    console.log("📊 CHAT SERVICE: RAG result:", {
+      isSuccess: ragResult.isSuccess,
+      message: ragResult.message,
+      hasData: !!ragResult.data,
+      sourcesCount: ragResult.data?.sources?.length || 0,
+      answerLength: ragResult.data?.answer?.length || 0
+    })
+
+    if (ragResult.isSuccess && ragResult.data) {
+      console.log("✅ CHAT SERVICE: RAG succeeded, returning RAG response")
+      console.log("📄 RAG Sources found:", ragResult.data.sources?.map(s => ({
+        id: s.id,
+        score: s.score,
+        textPreview: s.text.substring(0, 50) + "..."
+      })))
+      
+      return {
+        isSuccess: true,
+        message: "Generated RAG-powered response",
+        data: {
+          message: ragResult.data.answer,
+          sources: ragResult.data.sources,
+          isRagResponse: true,
+          reportGenerated: ragResult.data.reportId ? {
+            id: ragResult.data.reportId,
+            title: `Query: ${message.substring(0, 50)}...`,
+            content: ragResult.data.answer
+          } : undefined
         }
       }
     }
 
-    // Generate a regular chat response
-    const response = await generateChatResponse(message)
+    // Fallback to simple response if RAG fails
+    console.log("⚠️ CHAT SERVICE: RAG failed, using fallback response")
+    const fallbackResponse = await generateFallbackResponse(message)
 
     return {
       isSuccess: true,
-      message: "Chat response generated",
+      message: "Generated fallback response",
       data: {
-        message: response
+        message: fallbackResponse,
+        isRagResponse: false
       }
     }
   } catch (error) {
-    console.error("Error processing chat message:", error)
+    console.error("❌ CHAT SERVICE: Error processing chat message:", error)
     return { isSuccess: false, message: "Failed to process chat message" }
   }
 }
@@ -190,14 +212,14 @@ Key next steps:
 This report will be added to your personal knowledge base to inform future recommendations and research.`
 }
 
-async function generateChatResponse(message: string): Promise<string> {
-  // Generate contextual chat responses
+async function generateFallbackResponse(message: string): Promise<string> {
+  // Generate simple fallback responses when RAG is not available
   const responses = [
-    "I understand your request. Let me analyze this and see if I should generate a detailed research report for you.",
-    "That's an interesting question. I'll search through your documents and available research to provide the best guidance.",
-    "I can help you with that. Give me a moment to process your request and determine the most helpful approach.",
-    "Based on your message, I'm evaluating whether to provide a quick response or generate a comprehensive research report.",
-    "I'm processing your request and will provide either immediate insights or a detailed research analysis depending on the complexity."
+    "I understand your request. However, I don't have access to your personal documents right now. Please make sure you've uploaded some documents first so I can provide personalized insights.",
+    "That's an interesting question. To give you the most relevant answer, I'd need to search through your uploaded documents. Have you added any personal documents to your library yet?",
+    "I can help you with that once you've uploaded some documents to your Personal Librarian. Your documents help me provide personalized, relevant responses.",
+    "Based on your message, I'd like to search through your personal documents to provide the best guidance. Please upload some documents first.",
+    "I'm ready to help! To provide personalized insights, I need access to your documents. Try uploading some PDFs or text files about your goals, problems, or interests."
   ]
   
   return responses[Math.floor(Math.random() * responses.length)]

@@ -37,8 +37,13 @@ You will likely not need paid plans unless you are building a business.
 ## Environment Variables
 
 ```bash
-# DB (Supabase)
+# Database (Supabase)
 DATABASE_URL=
+
+# Supabase Configuration  
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
 # Auth (Clerk)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=

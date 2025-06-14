@@ -5,9 +5,6 @@ Initializes the database connection and schema for the app.
 */
 
 import { 
-  usersTable,
-  userProfilesTable,
-  profilesTable, 
   todosTable, 
   documentsTable,
   contentItemsTable,
@@ -18,21 +15,13 @@ import {
 import { config } from "dotenv"
 import { drizzle } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
+import * as schema from "./schema"
 
 config({ path: ".env.local" })
 
-const schema = {
-  users: usersTable,
-  userProfiles: userProfilesTable,
-  profiles: profilesTable,
-  todos: todosTable,
-  documents: documentsTable,
-  contentItems: contentItemsTable,
-  llmReports: llmReportsTable,
-  reportFeedback: reportFeedbackTable,
-  promptHistory: promptHistoryTable
-}
+const connectionString = process.env.DATABASE_URL!
 
-const client = postgres(process.env.DATABASE_URL!)
+// Remove custom type configuration that might be causing issues
+const client = postgres(connectionString)
 
 export const db = drizzle(client, { schema })

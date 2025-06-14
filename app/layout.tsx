@@ -4,10 +4,6 @@ The root server layout for the app.
 </ai_context>
 */
 
-import {
-  createProfileAction,
-  getProfileByUserIdAction
-} from "@/actions/db/profiles-actions"
 import { Toaster } from "@/components/ui/toaster"
 import { PostHogPageview } from "@/components/utilities/posthog/posthog-pageview"
 import { PostHogUserIdentify } from "@/components/utilities/posthog/posthog-user-identity"
@@ -33,13 +29,6 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   const { userId } = await auth()
-
-  if (userId) {
-    const profileRes = await getProfileByUserIdAction(userId)
-    if (!profileRes.isSuccess) {
-      await createProfileAction({ userId })
-    }
-  }
 
   return (
     <ClerkProvider>

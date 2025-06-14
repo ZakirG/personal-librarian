@@ -1,5 +1,6 @@
 -- enable UUIDs once per DB
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS citext;
 
 -------------------------------
 -- users & profile
@@ -19,7 +20,7 @@ CREATE TABLE user_profiles (
     goal_summary  TEXT,
     global_rules  TEXT,
     timezone      TEXT,
-    daily_report_at TIME       -- optional “send my report around 09:00”
+    daily_report_at TIME       -- optional "send my report around 09:00"
 );
 
 -------------------------------
@@ -54,7 +55,7 @@ CREATE TABLE content_items (
 -------------------------------
 CREATE TABLE llm_reports (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_id     TEXT NOT NULL,
     title       TEXT,
     content     TEXT NOT NULL,
     source_urls JSONB,
@@ -64,7 +65,7 @@ CREATE TABLE llm_reports (
 CREATE TABLE report_feedback (
     id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     report_id  UUID REFERENCES llm_reports(id) ON DELETE CASCADE,
-    user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_id    TEXT NOT NULL,
     rating     INT  CHECK (rating BETWEEN 1 AND 5),
     comments   TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -75,7 +76,7 @@ CREATE TABLE report_feedback (
 -------------------------------
 CREATE TABLE prompt_history (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_id         TEXT NOT NULL,
     prompt          TEXT NOT NULL,
     llm_response_id UUID REFERENCES llm_reports(id),
     created_at      TIMESTAMPTZ DEFAULT NOW()

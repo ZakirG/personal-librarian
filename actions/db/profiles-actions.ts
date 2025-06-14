@@ -16,10 +16,10 @@ import { ActionState } from "@/types"
 import { eq } from "drizzle-orm"
 
 export async function createProfileAction(
-  data: InsertProfile
+  profile: InsertProfile
 ): Promise<ActionState<SelectProfile>> {
   try {
-    const [newProfile] = await db.insert(profilesTable).values(data).returning()
+    const [newProfile] = await db.insert(profilesTable).values(profile).returning()
     return {
       isSuccess: true,
       message: "Profile created successfully",
@@ -35,11 +35,17 @@ export async function getProfileByUserIdAction(
   userId: string
 ): Promise<ActionState<SelectProfile>> {
   try {
-    const profile = await db.query.profiles.findFirst({
-      where: eq(profilesTable.userId, userId)
-    })
+    const [profile] = await db
+      .select()
+      .from(profilesTable)
+      .where(eq(profilesTable.userId, userId))
+      .limit(1)
+
     if (!profile) {
-      return { isSuccess: false, message: "Profile not found" }
+      return {
+        isSuccess: false,
+        message: "Profile not found"
+      }
     }
 
     return {
@@ -63,10 +69,6 @@ export async function updateProfileAction(
       .set(data)
       .where(eq(profilesTable.userId, userId))
       .returning()
-
-    if (!updatedProfile) {
-      return { isSuccess: false, message: "Profile not found to update" }
-    }
 
     return {
       isSuccess: true,

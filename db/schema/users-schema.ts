@@ -4,21 +4,21 @@ Defines the database schema for users and user profiles, matching the data_model
 </ai_context>
 */
 
-import { pgTable, text, timestamp, uuid, time, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, time } from "drizzle-orm/pg-core"
 
 export const usersTable = pgTable("users", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull().unique(),
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(), // Using citext in database
   passwordHash: text("password_hash").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date())
 })
 
 export const userProfilesTable = pgTable("user_profiles", {
-  userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
+  userId: text("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
   firstName: text("first_name"),
   lastName: text("last_name"),
   goalSummary: text("goal_summary"),
