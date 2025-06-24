@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isViewDocsModalOpen, setIsViewDocsModalOpen] = useState(false)
   const [documents, setDocuments] = useState<typeof documentsTable.$inferSelect[]>([])
+  const [documentsCount, setDocumentsCount] = useState<number>(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
@@ -74,7 +75,7 @@ export default function DashboardPage() {
     return () => clearTimeout(timeoutId)
   }, [messages, isSending])
 
-  // Add welcome message when component mounts
+  // Add welcome message and load documents count when component mounts
   useEffect(() => {
     if (user?.id) {
       // Add welcome message
@@ -86,6 +87,9 @@ export default function DashboardPage() {
           timestamp: new Date()
         }
       ])
+      
+      // Load documents count
+      loadDocumentsCount()
     }
   }, [user?.id])
 
@@ -227,7 +231,8 @@ export default function DashboardPage() {
         }
       ])
 
-      // Document processed successfully
+      // Document processed successfully - refresh count
+      loadDocumentsCount()
     } catch (error) {
       console.error("Error uploading file:", error)
       setMessages(prev => [
@@ -255,19 +260,38 @@ export default function DashboardPage() {
   const loadDocuments = async () => {
     if (!user?.id) return
     
+    console.log('Loading documents for user:', user.id)
     try {
       const result = await getDocumentsByUserIdAction(user.id)
+      console.log('Documents result:', result)
       if (result.isSuccess && result.data) {
+        console.log('Setting documents:', result.data)
         setDocuments(result.data)
+      } else {
+        console.log('No documents found or error:', result.message)
       }
     } catch (error) {
       console.error('Error loading documents:', error)
     }
   }
 
+  const loadDocumentsCount = async () => {
+    if (!user?.id) return
+    
+    try {
+      const result = await getDocumentsByUserIdAction(user.id)
+      if (result.isSuccess && result.data) {
+        setDocumentsCount(result.data.length)
+      }
+    } catch (error) {
+      console.error('Error loading documents count:', error)
+    }
+  }
+
   useEffect(() => {
     if (isViewDocsModalOpen) {
       loadDocuments()
+      loadDocumentsCount() // Also refresh the count when modal opens
     }
   }, [isViewDocsModalOpen])
 
@@ -289,9 +313,15 @@ export default function DashboardPage() {
             <Button
               onClick={() => setIsViewDocsModalOpen(true)}
               variant="outline"
+              className="relative"
             >
               <FileText className="w-4 h-4 mr-2" />
               View Uploaded Docs
+              {documentsCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {documentsCount}
+                </span>
+              )}
             </Button>
             <Link href="/profile">
               <Button variant="outline" size="icon">
